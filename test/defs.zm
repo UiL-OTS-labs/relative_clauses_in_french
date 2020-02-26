@@ -1,0 +1,27 @@
+/******************************************************************************\
+FILE:           defs.zm
+AUTHOR:         Theo Veenker <theo.veenker@beexy.nl>
+ADAPTED BY:     -
+
+DESCRIPTION:
+
+Defines experiment settings such as for trial timing.
+
+
+HISTORY:
+2012-03-19 TV   Created.
+
+\******************************************************************************/
+
+
+// Duration of the interval between two trials.
+const dur       INTERTRIAL_INTERVAL             = 1000ms;
+
+// Maximum number of starred segments in a sentence. Only reading time of
+// starred segments are recorded. When changing this value also change the 
+// definition of the TestOutput record (in output.zm) and make sure all 
+// record fields are assigned to (in read_mw.zm).
+const int       MAX_STARRED_SEGMENTS            = 10;
+
+// Chance of presenting a question/statement (0..100%).
+const int       STATEMENT_CHANCE                = 50;

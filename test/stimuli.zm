@@ -1,0 +1,99 @@
+/******************************************************************************\
+FILE:           stimuli.zm
+AUTHOR:         Theo Veenker <theo.veenker@beexy.nl>
+ADAPTED BY:     -
+
+DESCRIPTION:
+
+Defines the formats of item table(s) and provides the actual content of
+the item table(s) i.e. stimulus information.
+
+
+HISTORY:
+2012-03-19 TV   Created.
+2012-04-03 TV   Changed * symbol to # symbol. Otherwise you can't comment 
+                out parts.
+2013-07-04 TV   Loading test_items table from CSV file.
+
+\******************************************************************************/
+
+
+// Symbolic definition of item type.
+enum ItemType
+{
+    FILLER,                // filler
+    HIGH,                  // ?
+    LOW,                   // ?
+    REL_A,                 // assez difficile
+    REL_B,                 // vraiment difficile
+}
+
+
+// Item table record.
+record TestItem
+{
+    int         id;             // item id
+    ItemType    type;           // item type
+    string      segments;       // segments separated by slashes
+    string      question;       // true/false statement about stimulus [opt]
+    bool        qanswer;        // correct answer to question (true/false)
+}
+
+
+// Practice item table.
+//   index: item number
+TestItem[..] prac_items =
+{
+    {
+        1, FILLER, 
+        "Cras/quis/nisl/sed/nibh/aelementum/convallis.",
+        "Praesent ut erat diam, vel sollicitudin orci?",
+        false
+    },
+    {
+        2, FILLER, 
+        "Aliquam/vitae/turpis/et/sem/commodo/dapibus/\nut/a/leo.",
+        "Fusce eu risus sed mi mollis tincidunt et non nunc?",
+        true
+    },
+};
+
+
+// Test item table.
+//   index: item number
+TestItem[..] test_items;
+
+
+// Loads item table(s) from CSV file(s) in the stimuli folder.
+int load_stimuli()
+{
+    // Uncomment relevant parts below to load stimuli from CSV file.
+
+    int err;
+
+//    // Load data into prac_items table.
+//    err = prac_items.load(stimuli_dir() + "prac_items.csv", 
+//        true,           // if true, file contains a header row
+//        1);             // number of lines to skip before header and data
+//    if (err) return err;
+
+
+    // Load data into test_items table.
+    err = test_items.load(stimuli_dir() + "test_items.csv", 
+        true,           // if true, file contains a header row
+        1);             // number of lines to skip before header and data
+    if (err) return err;
+
+    return OK;
+}
+
+
+// Saves item table(s) as CSV file(s) in the script folder.
+void save_stimuli()
+{
+    prac_items.save(script_dir() + "prac_items.csv", 
+        "Practice items");
+
+    test_items.save(script_dir() + "test_items.csv", 
+        "Test items");
+}

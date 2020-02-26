@@ -1,0 +1,305 @@
+/******************************************************************************\
+FILE:           test_page.zm
+AUTHOR:         Theo Veenker <theo.veenker@beexy.nl>
+ADAPTED BY:     -
+
+DESCRIPTION:
+
+Provides a page object to show to the participant during test trials.
+It handles presenting the stimulus and recording the participant's response.
+
+
+HISTORY:
+2012-03-19 TV   Created.
+2012-04-03 TV   Changed * symbol to # symbol. Otherwise you can't comment 
+                out parts in stimulus list.
+
+\******************************************************************************/
+
+
+Page test_page
+{
+    TestItem    item;           // trial control parameters
+    string      segment;        // current segment text
+
+
+    init()
+    {
+        fill_pattern_color = TEST_PAGE_COLOR;
+    }
+
+
+    on_event:key_press()
+    {
+        // Handle spacebar and Enter.
+        if (input_key == ' ' || input_key == KEY_Return)
+            response.process_hit(event_time);
+        else
+            handle_special_key(this, input_key, input_modifiers);
+    }
+
+
+    on_event:message()
+    {
+        // Process button-box message. See setup() below.
+        response.process_hit(event_time);
+    }
+
+
+    VerticalLayout layout
+    {
+        init()
+        {
+            spacing = 50;
+            height = 0;     // 0 means as large as possible
+        }
+
+
+        CanvasGadget canvas
+        {
+            init()
+            {
+                fill_pattern_color = TEST_PAGE_STIMULUS_COLOR;
+                size = 400, 100;
+                offset_x = width / 2;
+//                offset_x = 40;
+                offset_y = height / 2;
+            }
+
+
+            TextShape stimulus
+            {
+                init()
+                {
+                    font_family = TEST_PAGE_STIMULUS_FONT_FAMILY;
+                    font_size = TEST_PAGE_STIMULUS_FONT_SIZE;
+                    line_pattern_color = TEST_PAGE_STIMULUS_TEXT_COLOR;
+                    hor_alignment = ALIGN_CENTER;
+//                    hor_alignment = ALIGN_BEGIN;
+                    ver_alignment = ALIGN_CENTER;
+                    is_visible = true;
+                }
+
+
+                on_event:pre_start()
+                {
+                    text = segment;
+                }
+            }
+        }
+
+
+        time start_stimulus(time t)
+        {
+            // Start stimulus.
+            canvas.stimulus.start(t, 0s);
+
+            // Return stimulus onset time.
+            return canvas.stimulus.expected_start_time;
+        }
+
+
+        void reset()
+        {
+            full_abort();
+
+            canvas.stimulus.text = "";
+        }
+    }
+
+
+    Response response
+    {
+        int     slength;        // segments string length
+        int     nsegments;      // number of segments in segments string
+        int     segnum;         // current segment number
+
+        bool    measure;        // set when presenting a starred segment
+        int     measnum;        // current measurement number
+
+        // Response data.
+        int[..] rt;             // response times [ms]
+
+
+        init()
+        {
+            // Ignore unrealistic hits that may occur when holding down the
+            // response key on the keyboard or when the response box isn't
+            // properly debouncing the response button.
+
+            // Enable this to ignore all hits that are unrealistically close.
+            // This effectively disables the keyboard repeat function.
+            min_hit_interval = 75ms;
+
+            // Enable this to ignore a hit if it would result in an
+            // unrealistically short reaction time.
+//            min_reaction_time = 75ms;
+        }
+
+
+        void clear()
+        {
+            // Determine length of segments string.
+            slength = length(item.segments);
+
+            // Count how many segment in segments string.
+            nsegments = count_keys(item.segments, "/") + 1;
+
+            segnum = 0;
+
+            measure = false;
+            measnum = 1;
+
+            // Initialize RT array (1 more for convenience, we won't use rt[0]).
+            rt.size = MAX_STARRED_SEGMENTS + 1;
+            int n;
+            while (n < rt.size)
+            {
+                rt[n] = -9999;
+                n++;
+            }
+        }
+
+
+        void process_hit(time t)
+        {
+            HitType validity = hit(t);
+
+            // Accept the first hit in the response interval, end the 
+            // response interval and start next stimulus/response interval.
+            if (validity == HIT_VALID)
+            {
+                if (measure)
+                {
+                    if (measnum <= MAX_STARRED_SEGMENTS)
+                    {
+                        rt[measnum] = int(reaction_time(0));
+                        measnum++;
+                    }
+                    else
+                    {
+                        print_error("Too many starred segments in segments "
+                            "string " + string(item.id) + "\n");
+                    }
+                    
+                }
+
+                if (segnum == nsegments)
+                {
+                    ignore_remaining_hits();
+                    stop();
+                }
+                else
+                {
+                    segment = token(item.segments, "/", segnum);
+                    measure = character(segment, 0) == '#';
+                    if (measure) segment = substring(segment, 1, slength-1);
+                    segment = trim_whitespace(segment);
+                    segnum++;
+
+                    abort();
+                    time stimonset = layout.start_stimulus(t);
+                    start(stimonset);
+                }
+            }
+            else if (validity == HIT_TOO_EARLY || validity == HIT_TOO_LATE)
+            {
+                // False alarm. Deal with this if desired.
+            }
+        }
+
+
+        on_event:finish()
+        {
+            done(CONTINUE);
+        }
+    }
+
+
+    // Aborts any ongoing activity on this page and signals the initiator
+    // of the trial that we're done.
+    void done(int msgid)
+    {
+        // Just in case; abort presentation if still active.
+        layout.reset();
+
+        signal_target(msgid);   // tell caller we're done
+        target = null;
+
+        control.clear_status();
+    }
+
+
+    //==========================================================================
+
+
+    // Performs preparatory work required before using this page.
+    void setup(int ntrials=-1, bool pr=false)
+    {
+        test_page_overlay.setup(this);
+
+        // Show or hide prompt.
+        test_page_overlay.show_prompt(pr ? 
+            "read sentence word by word" : "");
+
+        // Enable or disable the progress bar.
+        test_page_overlay.show_progress_bar(ntrials);   // disabled if < 0
+
+
+        // Enable button-box buttons.
+        control.target = this;
+        control.button_box.disable_buttons();
+        control.button_box.enable_all_buttons(CONTINUE);
+    }
+
+
+    // Performs cleaning up if necessary.
+    void cleanup()
+    {
+        test_page_overlay.cleanup();
+
+        control.button_box.disable_buttons();
+        control.target = null;
+    }
+
+
+    // Starts a trial.
+    void action(Object caller, TestItem it, time tref, int count=-1)
+    {
+        // Save the passed trial control parameters.
+        item = it;
+
+
+        // Show this page (if not yet done) and make tref the trial start time.
+        tref = test_window1.show_test_page(this, tref + INTERTRIAL_INTERVAL);
+
+
+        // Reset response data.
+        response.clear();
+
+
+        // First 'stimulus' is a fixation symbol. Once that is displayed
+        // participant can produce the segments by hitting the response
+        // button repeatedly.
+        segment = "+";
+        time fixonset = layout.start_stimulus(tref);
+
+
+        // Response interval starts at fixation symbol onset.
+        response.start(fixonset);
+
+
+        // Update progress counter (if enabled).
+        test_page_overlay.update_progress_bar(count);
+
+
+        // Update status line on control window. Cleared in done() above.
+        control.set_status(
+            string(item.id) + "  " + 
+            string(item.type));
+
+
+        // Remember who to signal when the trial is over.
+        target = caller;
+    }
+}

@@ -1,0 +1,10 @@
+### Test items ###
+id;type;segments;question;qanswer
+1;FILLER;"Je pense,/donc/je/suis/un/penseur.";"Le person est un penseur?";true
+2;FILLER;"J'ai/envie/de/sortir/ce/soir.";"Le person a envie de rester a la maison?";false
+3;HIGH;"Je vois/#le hamster/#de ma soeur/#qui marche/#là-bas,/#qui a/#un poil brun.";"Tu comprends?";false
+4;HIGH;"Je vois/#la femme/#de l’homme/#que je connais,/#qui a/#des cheveux longs.";"Assdez difficile, n'est ce pas?";true
+5;LOW;"Je vois/#le marie/#de la femme/#que je connais,/#qui a un barbe.";"Le monde est perdu?";false
+6;LOW;"Je vois/#l’oncle/#de la femme/#que je connais,/#qui a/#une moustache.";"Moustache, c'est 'cool'?";true
+7;REL_A;"Si,/#ce soir,/#j'ai/#envie/#de/#casser/#ma voix.";"Donc...?";false
+8;REL_B;"Je vois/#la soeur/#de l’homme/#qui marche/#là-bas,/#qui a/#des cheveux/#courts.";"Tout va bien?";true
